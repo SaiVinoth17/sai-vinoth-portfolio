@@ -498,10 +498,11 @@ export class PhysicsVehicle
             // Ice slip
             const groundObject = this.controller.wheelGroundObject(i)
 
-            if(groundObject && this.game.world.waterSurface)
+            if(groundObject && this.game.world?.waterSurface?.ice?.physical?.body)
             {
-                const onIce = groundObject.parent() === this.game.world.waterSurface.ice.physical.body
-                const iceFriction = lerp(this.wheels.settings.frictionSlip, 0.04, this.game.world.waterSurface.iceRatio.value)
+                const onIce = groundObject.parent && groundObject.parent() === this.game.world.waterSurface.ice.physical.body
+                const iceRatioVal = this.game.world.waterSurface.iceRatio?.value || 0
+                const iceFriction = lerp(this.wheels.settings.frictionSlip, 0.04, iceRatioVal)
 
                 this.controller.setWheelFrictionSlip(i, onIce ? iceFriction : this.wheels.settings.frictionSlip)
             }

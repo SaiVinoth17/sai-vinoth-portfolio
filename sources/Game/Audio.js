@@ -13,6 +13,35 @@ export class Audio
 
         this.initiated = false
         this.groups = new Map()
+        const originalGet = this.groups.get.bind(this.groups)
+        this.groups.get = (groupName) =>
+        {
+            let group = originalGet(groupName)
+            if(!group)
+            {
+                group = {
+                    items: [],
+                    lastPlayedId: -1,
+                    playRandomNext: (...params) => {
+                        if(!group.items || group.items.length === 0) return
+                        if(group.items.length === 1) {
+                            group.items[0]?.play?.(...params)
+                            return
+                        }
+                        const delta = 1 + Math.floor(Math.random() * Math.max(1, group.items.length - 1))
+                        const id = Math.abs((group.lastPlayedId + delta) % group.items.length)
+                        group.items[id]?.play?.(...params)
+                    },
+                    play: (...params) => {
+                        if(!group.items || group.items.length === 0) return
+                        const id = Math.abs((group.lastPlayedId + 1) % group.items.length)
+                        group.items[id]?.play?.(...params)
+                    }
+                }
+                this.groups.set(groupName, group)
+            }
+            return group
+        }
         this.events = new Events()
 
         this.setMute()
@@ -48,27 +77,54 @@ export class Audio
         const groupName = options.group ?? 'all'
         let group = this.groups.get(groupName)
 
-        if(!group)
+        if(!group || !group.items)
         {
-            group = {}
-            group.items = []
-            group.lastPlayedId = -1
+            group = {
+                items: [],
+                lastPlayedId: -1,
+                playRandomNext: (...parameters) =>
+                {
+                    if(!group.items || group.items.length === 0) return
+                    if(group.items.length === 1) {
+                        group.items[0]?.play?.(...parameters)
+                        return
+                    }
+                    const delta = 1 + Math.floor(Math.random() * Math.max(1, group.items.length - 1))
+                    const id = Math.abs((group.lastPlayedId + delta) % group.items.length)
+                    const item = group.items[id]
+                    if(item) item.play(...parameters)
+                },
+                play: (...parameters) =>
+                {
+                    if(!group.items || group.items.length === 0) return
+                    const id = Math.abs((group.lastPlayedId + 1) % group.items.length)
+                    const item = group.items[id]
+                    if(item) item.play(...parameters)
+                }
+            }
+            this.groups.set(groupName, group)
+        }
+        else
+        {
             group.playRandomNext = (...parameters) =>
             {
-                const delta = 1 + Math.floor(Math.random() * (group.items.length - 2))
-                const id = (group.lastPlayedId + delta) % group.items.length
-
+                if(!group.items || group.items.length === 0) return
+                if(group.items.length === 1) {
+                    group.items[0]?.play?.(...parameters)
+                    return
+                }
+                const delta = 1 + Math.floor(Math.random() * Math.max(1, group.items.length - 1))
+                const id = Math.abs((group.lastPlayedId + delta) % group.items.length)
                 const item = group.items[id]
-                item.play(...parameters)
+                if(item) item.play(...parameters)
             }
             group.play = (...parameters) =>
             {
-                const id = (group.lastPlayedId + 1) % group.items.length
-
+                if(!group.items || group.items.length === 0) return
+                const id = Math.abs((group.lastPlayedId + 1) % group.items.length)
                 const item = group.items[id]
-                item.play(...parameters)
+                if(item) item.play(...parameters)
             }
-            this.groups.set(groupName, group)
         }
 
         const item = {}
@@ -725,34 +781,43 @@ export class Audio
 
                 // Positional and distance fade
                 let distanceFadeMultiplier = 1
-                if(item.positions && item.howl.playing())
+                if(item.positions && item.positions.length > 0 && item.howl.playing())
                 {
                     let closestDistance = Infinity
                     let closestPosition = null
 
-                    for(const position of item.positions)
-                    {
-                        const distance = position.distanceTo(this.game.view.focusPoint.position)
+                    const focusPos = this.game.view?.focusPoint?.position
 
-                        if(distance < closestDistance)
+                    if(focusPos)
+                    {
+                        for(const position of item.positions)
                         {
-                            closestDistance = distance
-                            closestPosition = position
+                            if(!position) continue
+                            const distance = position.distanceTo(focusPos)
+
+                            if(distance < closestDistance)
+                            {
+                                closestDistance = distance
+                                closestPosition = position
+                            }
                         }
                     }
 
-                    const cameraRelativePosition = closestPosition.clone()
-                    cameraRelativePosition.applyMatrix4(this.game.view.camera.matrixWorldInverse)
-                    cameraRelativePosition.normalize()
-                    cameraRelativePosition.z *= 0.1
-
-                    if(item.distanceFade)
+                    if(closestPosition && this.game.view?.camera?.matrixWorldInverse)
                     {
-                        distanceFadeMultiplier = remapClamp(closestDistance, 0, item.distanceFade, 1, 0)
-                    }
+                        const cameraRelativePosition = closestPosition.clone()
+                        cameraRelativePosition.applyMatrix4(this.game.view.camera.matrixWorldInverse)
+                        cameraRelativePosition.normalize()
+                        cameraRelativePosition.z *= 0.1
 
-                    if(distanceFadeMultiplier > 0)
-                        item.howl.pos(cameraRelativePosition.x, cameraRelativePosition.y, cameraRelativePosition.z)
+                        if(item.distanceFade)
+                        {
+                            distanceFadeMultiplier = remapClamp(closestDistance, 0, item.distanceFade, 1, 0)
+                        }
+
+                        if(distanceFadeMultiplier > 0)
+                            item.howl.pos(cameraRelativePosition.x, cameraRelativePosition.y, cameraRelativePosition.z)
+                    }
                 }
 
                 // Rate (apply global too)
