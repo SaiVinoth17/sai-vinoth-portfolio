@@ -1,0 +1,380 @@
+.sai-ai-trigger
+    position absolute
+    bottom 30px
+    right 30px
+    z-index 1000
+    display flex
+    align-items center
+    gap 10px
+    padding 10px 18px
+    background rgba(26, 22, 34, 0.85)
+    backdrop-filter blur(12px)
+    -webkit-backdrop-filter blur(12px)
+    border 1px solid rgba(214, 111, 255, 0.3)
+    border-radius 30px
+    color #ffffff
+    font-family Nunito, sans-serif
+    font-weight 700
+    font-size 15px
+    cursor pointer
+    box-shadow 0 8px 32px rgba(0, 0, 0, 0.4)
+    transition transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.3s ease, box-shadow 0.3s ease
+    outline none
+
+    &:hover
+        transform translateY(-3px) scale(1.03)
+        border-color rgba(214, 111, 255, 0.7)
+        box-shadow 0 12px 40px rgba(214, 111, 255, 0.25)
+
+    &:active
+        transform translateY(0) scale(0.98)
+
+    .badge-icon
+        width 10px
+        height 10px
+        border-radius 50%
+        background #D66FFF
+        box-shadow 0 0 10px #D66FFF
+        animation pulseGlow 2s infinite ease-in-out
+
+    .label
+        letter-spacing 0.5px
+
+@keyframes pulseGlow
+    0%, 100%
+        opacity 0.6
+        transform scale(0.9)
+    50%
+        opacity 1
+        transform scale(1.2)
+
+.sai-ai-modal
+    position fixed
+    bottom 90px
+    right 30px
+    width 380px
+    max-width calc(100vw - 40px)
+    height 540px
+    max-height calc(100vh - 120px)
+    background rgba(23, 19, 31, 0.94)
+    backdrop-filter blur(20px)
+    -webkit-backdrop-filter blur(20px)
+    border 1px solid rgba(214, 111, 255, 0.35)
+    border-radius 20px
+    box-shadow 0 20px 60px rgba(0, 0, 0, 0.6)
+    display flex
+    flex-direction column
+    z-index 1001
+    opacity 0
+    visibility hidden
+    transform translateY(20px) scale(0.95)
+    transition opacity 0.3s ease, transform 0.3s cubic-bezier(0.165, 0.84, 0.44, 1), visibility 0.3s
+
+    &.is-visible
+        opacity 1
+        visibility visible
+        transform translateY(0) scale(1)
+
+    .modal-header
+        display flex
+        align-items center
+        justify-content space-between
+        padding 16px 20px
+        border-bottom 1px solid rgba(255, 255, 255, 0.1)
+
+        .title-group
+            display flex
+            flex-direction column
+
+            .title
+                font-family Nunito, sans-serif
+                font-weight 900
+                font-size 18px
+                color #ffffff
+                letter-spacing 1px
+                display flex
+                align-items center
+                gap 8px
+
+                .sparkle
+                    color #D66FFF
+
+            .subtitle
+                font-family Nunito, sans-serif
+                font-size 12px
+                color rgba(255, 255, 255, 0.6)
+
+        .close-button
+            background transparent
+            border none
+            color rgba(255, 255, 255, 0.7)
+            font-size 22px
+            cursor pointer
+            width 32px
+            height 32px
+            border-radius 50%
+            display flex
+            align-items center
+            justify-content center
+            transition background 0.2s, color 0.2s
+
+            &:hover
+                background rgba(255, 255, 255, 0.1)
+                color #ffffff
+
+    .modal-body
+        flex 1
+        padding 16px
+        overflow-y auto
+        display flex
+        flex-direction column
+        gap 14px
+        scrollbar-width thin
+        scrollbar-color rgba(214, 111, 255, 0.4) transparent
+
+        &::-webkit-scrollbar
+            width 6px
+
+        &::-webkit-scrollbar-thumb
+            background rgba(214, 111, 255, 0.4)
+            border-radius 3px
+
+    .welcome-card
+        background rgba(255, 255, 255, 0.04)
+        border 1px solid rgba(255, 255, 255, 0.08)
+        border-radius 14px
+        padding 14px
+        font-family Nunito, sans-serif
+        font-size 13px
+        line-height 1.5
+        color rgba(255, 255, 255, 0.9)
+
+        .highlight
+            color #D66FFF
+            font-weight 700
+
+    .suggestions-container
+        display flex
+        flex-wrap wrap
+        gap 8px
+        margin-top 6px
+
+        .suggestion-pill
+            background rgba(214, 111, 255, 0.12)
+            border 1px solid rgba(214, 111, 255, 0.3)
+            border-radius 16px
+            padding 6px 12px
+            font-family Nunito, sans-serif
+            font-size 12px
+            color #ffffff
+            cursor pointer
+            transition background 0.2s, transform 0.2s
+
+            &:hover
+                background rgba(214, 111, 255, 0.25)
+                transform translateY(-1px)
+
+    .message-row
+        display flex
+        flex-direction column
+        gap 4px
+        max-width 85%
+
+        &.user
+            align-self flex-end
+
+            .bubble
+                background linear-gradient(135deg, #8A2BE2, #6A0DAD)
+                color #ffffff
+                border-radius 16px 16px 2px 16px
+                padding 10px 14px
+                font-family Nunito, sans-serif
+                font-size 13px
+                line-height 1.45
+                word-break break-word
+
+        &.assistant
+            align-self flex-start
+
+            .bubble
+                background rgba(38, 32, 50, 0.9)
+                border 1px solid rgba(214, 111, 255, 0.2)
+                color rgba(255, 255, 255, 0.95)
+                border-radius 16px 16px 16px 2px
+                padding 12px 14px
+                font-family Nunito, sans-serif
+                font-size 13px
+                line-height 1.5
+                word-break break-word
+
+    .card-item
+        background rgba(30, 25, 40, 0.95)
+        border 1px solid rgba(214, 111, 255, 0.3)
+        border-radius 12px
+        padding 12px
+        margin-top 6px
+        display flex
+        flex-direction column
+        gap 8px
+
+        .card-title
+            font-family Nunito, sans-serif
+            font-weight 700
+            font-size 14px
+            color #ffffff
+
+        .card-category
+            font-size 11px
+            color #D66FFF
+            text-transform uppercase
+            letter-spacing 0.5px
+
+        .card-desc
+            font-size 12px
+            color rgba(255, 255, 255, 0.8)
+            line-height 1.4
+
+        .card-cta
+            align-self flex-start
+            background #D66FFF
+            color #17131F
+            border none
+            border-radius 8px
+            padding 6px 12px
+            font-family Nunito, sans-serif
+            font-weight 700
+            font-size 12px
+            cursor pointer
+            text-decoration none
+            transition background 0.2s
+
+            &:hover
+                background #E299FF
+
+    .action-btn
+        display inline-flex
+        align-items center
+        gap 6px
+        background rgba(255, 255, 255, 0.08)
+        border 1px solid rgba(255, 255, 255, 0.2)
+        color #ffffff
+        border-radius 8px
+        padding 6px 12px
+        font-family Nunito, sans-serif
+        font-size 12px
+        cursor pointer
+        margin-top 4px
+        transition background 0.2s
+
+        &:hover
+            background rgba(255, 255, 255, 0.18)
+
+    .thinking-dots
+        display flex
+        align-items center
+        gap 6px
+        padding 8px 14px
+        background rgba(38, 32, 50, 0.9)
+        border-radius 16px 16px 16px 2px
+        align-self flex-start
+        width fit-content
+
+        span:not(.status-label)
+            width 6px
+            height 6px
+            border-radius 50%
+            background #D66FFF
+            animation dots 1.4s infinite ease-in-out both
+
+            &:nth-child(1)
+                animation-delay -0.32s
+            &:nth-child(2)
+                animation-delay -0.16s
+
+        .status-label
+            font-size 11px
+            color rgba(255, 255, 255, 0.7)
+            margin-left 6px
+            font-family Nunito, sans-serif
+
+    .md-h3
+        font-family Nunito, sans-serif
+        font-size 14px
+        font-weight 700
+        color #D66FFF
+        margin-top 6px
+        margin-bottom 4px
+
+    .md-li
+        margin-left 12px
+        list-style-type disc
+
+    .modal-footer
+        padding 12px 16px
+        border-top 1px solid rgba(255, 255, 255, 0.1)
+        display flex
+        align-items center
+        gap 8px
+
+        .chat-input
+            flex 1
+            background rgba(255, 255, 255, 0.06)
+            border 1px solid rgba(255, 255, 255, 0.15)
+            border-radius 20px
+            padding 10px 16px
+            color #ffffff
+            font-family Nunito, sans-serif
+            font-size 13px
+            outline none
+            transition border-color 0.2s
+
+            &:focus
+                border-color rgba(214, 111, 255, 0.6)
+
+            &::placeholder
+                color rgba(255, 255, 255, 0.4)
+
+        .send-button
+            background #D66FFF
+            color #17131F
+            border none
+            width 36px
+            height 36px
+            border-radius 50%
+            display flex
+            align-items center
+            justify-content center
+            cursor pointer
+            font-size 16px
+            font-weight 900
+            transition background 0.2s, transform 0.2s
+
+            &:hover
+                background #E299FF
+                transform scale(1.05)
+
+            &:active
+                transform scale(0.95)
+
+@keyframes dots
+    0%, 80%, 100%
+        transform scale(0)
+    40%
+        transform scale(1)
+
+@media (max-width: 600px)
+    .sai-ai-trigger
+        bottom 20px
+        right 20px
+        padding 8px 14px
+        font-size 14px
+
+    .sai-ai-modal
+        bottom 0
+        right 0
+        left 0
+        width 100vw
+        max-width 100vw
+        height 80vh
+        max-height 80vh
+        border-radius 20px 20px 0 0
