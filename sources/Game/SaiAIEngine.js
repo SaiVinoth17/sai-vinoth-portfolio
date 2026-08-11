@@ -81,13 +81,24 @@ export class SaiAIEngine
             getContact: () => {
                 return SAI_KNOWLEDGE.contact
             },
-            openProject: (projectId) => {
-                const p = this.getTools().getProjectDetails(projectId)
-                if(p && p.url) {
-                    window.open(p.url, '_blank', 'noreferrer')
-                    return { status: 'opened', title: p.title, url: p.url }
+            openProject: (projectIdOrUrl) => {
+                const p = this.getTools().getProjectDetails(projectIdOrUrl)
+                let targetUrl = p ? p.url : projectIdOrUrl
+
+                const allowedUrls = [
+                    'https://github.com/SaiVinoth17',
+                    'https://saivinoth.netlify.app/',
+                    'https://thegamingkingdom.netlify.app/',
+                    'https://nilgirisexplorers.com/',
+                    'https://ootymistwings.com/',
+                    'https://houseofpetalss.netlify.app/'
+                ]
+
+                if(allowedUrls.includes(targetUrl)) {
+                    window.open(targetUrl, '_blank', 'noopener,noreferrer')
+                    return { status: 'opened', url: targetUrl }
                 }
-                return { status: 'project_not_found', id: projectId }
+                return { status: 'url_blocked', url: targetUrl }
             },
             showProjects: () => {
                 if(this.game.world?.areas?.projects) {
@@ -138,13 +149,12 @@ export class SaiAIEngine
     }
 
     /**
-     * Process message from user with optional streaming
+     * Process message from user
      */
     async processMessage(userText, onChunk = null)
     {
         const text = (userText || '').trim()
 
-        // 1. Input Validation & Size Limit
         if(!text) {
             return {
                 statusText: 'Waiting for input...',
@@ -163,7 +173,6 @@ export class SaiAIEngine
             }
         }
 
-        // 2. Rate limiting check
         if(!this.checkRateLimit()) {
             return {
                 statusText: 'Rate limit exceeded',
@@ -175,24 +184,21 @@ export class SaiAIEngine
 
         SaiAIAnalytics.trackEvent('question_submitted', { text })
 
-        // Check active Hire Mode
         if(this.hireMode.active) {
             return this.processHireModeStep(text)
         }
 
-        // Session history
         this.history.push({ role: 'user', content: text })
 
-        // 3. Groq Open-Weight Model (`openai/gpt-oss-20b`) Integration
+        // Groq API call if key configured
         if(this.apiKey) {
             try {
                 return await this.processWithGroqStream(text, onChunk)
             } catch (err) {
-                console.warn('Groq API error, falling back to intelligent local engine:', err)
+                console.warn('Groq API call error, falling back to intelligent local engine:', err)
             }
         }
 
-        // 4. Intelligent Local Engine (Fallback)
         return this.processWithLocalEngine(text)
     }
 
@@ -243,12 +249,22 @@ export class SaiAIEngine
     }
 
     /**
-     * Intelligent Local Engine (No Hallucinations, Deterministic Actions)
+     * Intelligent Local Engine
      */
     processWithLocalEngine(text)
     {
         const lower = text.toLowerCase()
         const tools = this.getTools()
+
+        // 1. Check for Bruno Simon queries -> Reject cleanly
+        if(lower.includes('bruno') || lower.includes('bruno simon')) {
+            return {
+                statusText: 'Sai Vinoth Portfolio Assistant',
+                text: "I don't have information about Bruno Simon's projects. As Sai Vinoth's portfolio assistant, I can share Sai's projects: **Nilgiris Explorers**, **Gaming Kingdom**, **Ooty Mistwings**, and **House Of Petalss**.",
+                cards: SAI_KNOWLEDGE.projects,
+                actions: []
+            }
+        }
 
         // Multi-turn context resolution
         const lastTurn = this.history.length > 2 ? this.history[this.history.length - 3]?.content?.toLowerCase() || '' : ''
@@ -258,7 +274,7 @@ export class SaiAIEngine
         else if(lastTurn.includes('ooty') || lastTurn.includes('mistwings')) contextProject = tools.getProjectDetails('ooty-mistwings')
         else if(lastTurn.includes('petal')) contextProject = tools.getProjectDetails('house-of-petalss')
 
-        // Strict Anti-Hallucination Guard
+        // 2. Strict Anti-Hallucination Guard
         const forbiddenKeywords = ['salary', 'earnings', 'client list', 'past clients', 'company list', 'award', 'employment', 'phone number', 'email address']
         if(forbiddenKeywords.some(kw => lower.includes(kw))) {
             return {
@@ -272,7 +288,7 @@ export class SaiAIEngine
             }
         }
 
-        // Hire Intent
+        // 3. Hire Intent
         if(lower.includes('hire') || lower.includes('build my website') || lower.includes('need a developer') || lower.includes('work with sai') || lower.includes('have a project')) {
             tools.startHireFlow()
             SaiAIAnalytics.trackEvent('hire_mode_started')
@@ -287,28 +303,90 @@ export class SaiAIEngine
             }
         }
 
-        // Requirement Recommendation Engine
-        if(lower.includes('need') || lower.includes('looking for') || lower.includes('closest to') || lower.includes('recommend') || lower.includes('hotel') || lower.includes('resort') || lower.includes('shop') || lower.includes('travel') || lower.includes('tourism')) {
-            const recommendedProj = tools.recommendProjectForRequirement(lower)
+        // 4. Tourism requirement / recommendation query
+        if(lower.includes('tourism') || lower.includes('travel') || lower.includes('destination') || lower.includes('hotel') || lower.includes('resort') || lower.includes('vacation')) {
+            const recommendedProj = tools.getProjectDetails('nilgiris-explorers')
             return {
-                statusText: "Exploring Sai's projects...",
-                text: `**${recommendedProj.title}** is the closest project in Sai's portfolio to that requirement. It focuses on the ${recommendedProj.category} experience built with ${recommendedProj.tags.join(', ')}.`,
+                statusText: "Recommending relevant project...",
+                text: `**Nilgiris Explorers** is the most relevant project in Sai Vinoth's portfolio to explore. It focuses on the Nilgiris tourism and travel experience, built with Next.js, React, and Tailwind CSS.`,
                 cards: [recommendedProj],
                 actions: [
-                    { type: 'url', label: `View ${recommendedProj.title}`, target: recommendedProj.url },
-                    { type: 'navigate', label: 'Contact Sai', target: 'contact' }
+                    { type: 'url', label: 'Visit Nilgiris Explorers →', target: recommendedProj.url }
                 ]
             }
         }
 
-        // Contextual follow-up
+        // 5. Specific project queries: Nilgiris Explorers
+        if(lower.includes('nilgiris')) {
+            const p = tools.getProjectDetails('nilgiris-explorers')
+            return {
+                statusText: 'Nilgiris Explorers',
+                text: `**Nilgiris Explorers** is a comprehensive travel and tourism portal built for discovering the Nilgiris district, local spots, and tourist experiences using **Next.js, React, and Tailwind CSS**.`,
+                cards: [p],
+                actions: [
+                    { type: 'url', label: 'Visit Nilgiris Explorers →', target: p.url }
+                ]
+            }
+        }
+
+        // 6. Specific project queries: Gaming Kingdom
+        if(lower.includes('gaming') || lower.includes('kingdom')) {
+            const p = tools.getProjectDetails('gaming-kingdom')
+            return {
+                statusText: 'Gaming Kingdom',
+                text: `**Gaming Kingdom** is an interactive platform dedicated to gaming news, features, and community experiences built with **HTML, CSS, and JavaScript**.`,
+                cards: [p],
+                actions: [
+                    { type: 'url', label: 'Visit Gaming Kingdom →', target: p.url }
+                ]
+            }
+        }
+
+        // 7. Specific project queries: Ooty Mistwings
+        if(lower.includes('ooty') || lower.includes('mistwings')) {
+            const p = tools.getProjectDetails('ooty-mistwings')
+            return {
+                statusText: 'Ooty Mistwings',
+                text: `**Ooty Mistwings** is a modern resort and hospitality web platform highlighting nature stays, local nature attractions, and bookings in Ooty.`,
+                cards: [p],
+                actions: [
+                    { type: 'url', label: 'Visit Ooty Mistwings →', target: p.url }
+                ]
+            }
+        }
+
+        // 8. Specific project queries: House Of Petalss
+        if(lower.includes('petal') || lower.includes('house of petalss')) {
+            const p = tools.getProjectDetails('house-of-petalss')
+            return {
+                statusText: 'House Of Petalss',
+                text: `**House Of Petalss** is an elegant digital storefront showcasing floral designs, custom arrangements, and artisanal gifts built with **React and Tailwind CSS**.`,
+                cards: [p],
+                actions: [
+                    { type: 'url', label: 'Visit House Of Petalss →', target: p.url }
+                ]
+            }
+        }
+
+        // 9. All projects / Show me projects query
+        if(lower.includes('all project') || lower.includes('all work') || lower.includes('all his work') || lower.includes('show me sai\'s projects') || lower.includes('show projects') || lower.includes('projects has sai built') || lower.includes('what project')) {
+            const projects = tools.searchProjects()
+            return {
+                statusText: 'Sai Vinoth Verified Projects',
+                text: `Here are Sai Vinoth's verified portfolio projects:`,
+                cards: projects,
+                actions: []
+            }
+        }
+
+        // 10. Contextual follow-up
         if(contextProject && (lower.includes('stack') || lower.includes('tech') || lower.includes('use') || lower.includes('similar') || lower.includes('it'))) {
             return {
                 statusText: 'Resolving conversation context...',
                 text: `**${contextProject.title}** uses **${contextProject.tags.join(', ')}**. Sai Vinoth can build something similar for your application.`,
                 cards: [contextProject],
                 actions: [
-                    { type: 'url', label: `View ${contextProject.title}`, target: contextProject.url },
+                    { type: 'url', label: `Visit ${contextProject.title} →`, target: contextProject.url },
                     { type: 'navigate', label: 'Contact Sai', target: 'contact' }
                 ]
             }
@@ -319,7 +397,7 @@ export class SaiAIEngine
             const contact = tools.getContact()
             return {
                 statusText: 'Fetching GitHub profile...',
-                text: `You can check out Sai Vinoth's repositories and code on GitHub at **${contact.github}**.`,
+                text: `You can check out Sai Vinoth's public repositories and code on GitHub at **${contact.github}**.`,
                 cards: [],
                 actions: [
                     { type: 'url', label: 'Open GitHub (SaiVinoth17)', target: contact.github }
@@ -339,52 +417,6 @@ export class SaiAIEngine
             }
         }
 
-        // Specific project queries
-        if(lower.includes('nilgiris')) {
-            const p = tools.getProjectDetails('nilgiris-explorers')
-            return {
-                statusText: 'Retrieving project details...',
-                text: `**Nilgiris Explorers** is a tourism portal built with **Next.js, React, and Tailwind CSS** for discovering attractions in the Nilgiris district.`,
-                cards: [p],
-                actions: [
-                    { type: 'url', label: 'View Nilgiris Explorers', target: p.url }
-                ]
-            }
-        }
-        if(lower.includes('gaming')) {
-            const p = tools.getProjectDetails('gaming-kingdom')
-            return {
-                statusText: 'Retrieving project details...',
-                text: `**Gaming Kingdom** is an interactive platform focused on gaming features and community experiences.`,
-                cards: [p],
-                actions: [
-                    { type: 'url', label: 'View Gaming Kingdom', target: p.url }
-                ]
-            }
-        }
-        if(lower.includes('ooty') || lower.includes('mistwings')) {
-            const p = tools.getProjectDetails('ooty-mistwings')
-            return {
-                statusText: 'Retrieving project details...',
-                text: `**Ooty Mistwings** is a modern resort and hospitality web platform highlighting nature stays in Ooty.`,
-                cards: [p],
-                actions: [
-                    { type: 'url', label: 'View Ooty Mistwings', target: p.url }
-                ]
-            }
-        }
-        if(lower.includes('petal') || lower.includes('house of petalss')) {
-            const p = tools.getProjectDetails('house-of-petalss')
-            return {
-                statusText: 'Retrieving project details...',
-                text: `**House Of Petalss** is an floral e-commerce shopfront showcasing custom arrangements.`,
-                cards: [p],
-                actions: [
-                    { type: 'url', label: 'View House Of Petalss', target: p.url }
-                ]
-            }
-        }
-
         // Skills query
         if(lower.includes('skill') || lower.includes('stack') || lower.includes('tech') || lower.includes('react') || lower.includes('next') || lower.includes('python')) {
             const skills = tools.getSkills()
@@ -394,19 +426,6 @@ export class SaiAIEngine
                 cards: [],
                 actions: [
                     { type: 'navigate', label: 'View Projects', target: 'projects' }
-                ]
-            }
-        }
-
-        // Projects query
-        if(lower.includes('project') || lower.includes('work') || lower.includes('built')) {
-            const projects = tools.searchProjects()
-            return {
-                statusText: 'Retrieving portfolio projects...',
-                text: `Sai Vinoth's portfolio projects include:`,
-                cards: projects,
-                actions: [
-                    { type: 'navigate', label: 'Show Projects', target: 'projects' }
                 ]
             }
         }
@@ -425,7 +444,7 @@ export class SaiAIEngine
             }
         }
 
-        // Strict fallback for unknown info
+        // Strict fallback
         return {
             statusText: 'Checking knowledge base...',
             text: "I don't have verified information about that.",
@@ -450,13 +469,14 @@ export class SaiAIEngine
         const systemPrompt = `You are Sai AI, the portfolio assistant for Sai Vinoth (brand: SaiRio), a Web Developer based in India.
 Model: ${this.model}
 
-Strict Knowledge Base:
-${JSON.stringify(SAI_KNOWLEDGE, null, 2)}
+Verified Projects:
+${JSON.stringify(SAI_KNOWLEDGE.projects, null, 2)}
 
 Strict Instructions:
-1. Do NOT invent information about Sai Vinoth. Never invent clients, employers, salary, years of experience, awards, testimonials, or unlisted contact details.
-2. If asked about unverified information, say: "I don't have verified information about that."
-3. Keep answers short and concise (1-4 short paragraphs/bullets).`
+1. NEVER invent URLs. ONLY reference the verified URLs provided above.
+2. If asked about Bruno Simon's projects, decline and stay focused on Sai Vinoth's 4 projects.
+3. If asked about unverified information, say: "I don't have verified information about that."
+4. Keep answers short and concise (1-4 short paragraphs/bullets).`
 
         const messages = [
             { role: 'system', content: systemPrompt },

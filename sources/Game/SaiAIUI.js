@@ -83,9 +83,10 @@ export class SaiAIUI
                 const type = actionBtn.dataset.type
                 const target = actionBtn.dataset.target
                 if(type === 'navigate') {
-                    this.engine.getTools().showContact()
                     if(target === 'projects') this.engine.getTools().showProjects()
                     else if(target === 'about') this.engine.getTools().showSkills()
+                    else if(target === 'contact') this.engine.getTools().showContact()
+                    else this.engine.getTools().showContact()
                     SaiAIAnalytics.trackEvent('section_navigated_from_ai', { section: target })
                 } else if(type === 'url') {
                     this.engine.getTools().openProject(target)
@@ -156,7 +157,6 @@ export class SaiAIUI
         const thinkingEl = this.appendThinking(statusMsg)
         this.scrollToBottom()
 
-        // Create stream target message element if streaming occurs
         let assistantMessageRow = null
 
         try {
@@ -240,18 +240,19 @@ export class SaiAIUI
                     <div class="card-title">${this.escapeHtml(c.title)}</div>
                     <div class="card-category">${this.escapeHtml(c.category || '')}</div>
                     <div class="card-desc">${this.escapeHtml(c.description || c.purpose || '')}</div>
-                    <button class="card-cta js-action-btn" data-type="url" data-target="${c.url}">View ${this.escapeHtml(c.title)} →</button>
+                    <a href="${c.url}" target="_blank" rel="noopener noreferrer" class="card-cta">Visit ${this.escapeHtml(c.title)} →</a>
                 </div>
             `).join('')
         }
 
         let actionsHtml = ''
         if(actions && actions.length > 0) {
-            actionsHtml = actions.map(a => `
-                <button class="action-btn js-action-btn" data-type="${a.type}" data-target="${a.target}">
-                    ${this.escapeHtml(a.label)}
-                </button>
-            `).join('')
+            actionsHtml = actions.map(a => {
+                if(a.type === 'url') {
+                    return `<a href="${a.target}" target="_blank" rel="noopener noreferrer" class="action-btn">${this.escapeHtml(a.label)} →</a>`
+                }
+                return `<button class="action-btn js-action-btn" data-type="${a.type}" data-target="${a.target}">${this.escapeHtml(a.label)}</button>`
+            }).join('')
         }
 
         bubble.innerHTML += cardsHtml + actionsHtml
@@ -269,18 +270,19 @@ export class SaiAIUI
                     <div class="card-title">${this.escapeHtml(c.title)}</div>
                     <div class="card-category">${this.escapeHtml(c.category || '')}</div>
                     <div class="card-desc">${this.escapeHtml(c.description || c.purpose || '')}</div>
-                    <button class="card-cta js-action-btn" data-type="url" data-target="${c.url}">View ${this.escapeHtml(c.title)} →</button>
+                    <a href="${c.url}" target="_blank" rel="noopener noreferrer" class="card-cta">Visit ${this.escapeHtml(c.title)} →</a>
                 </div>
             `).join('')
         }
 
         let actionsHtml = ''
         if(actions && actions.length > 0) {
-            actionsHtml = actions.map(a => `
-                <button class="action-btn js-action-btn" data-type="${a.type}" data-target="${a.target}">
-                    ${this.escapeHtml(a.label)}
-                </button>
-            `).join('')
+            actionsHtml = actions.map(a => {
+                if(a.type === 'url') {
+                    return `<a href="${a.target}" target="_blank" rel="noopener noreferrer" class="action-btn">${this.escapeHtml(a.label)} →</a>`
+                }
+                return `<button class="action-btn js-action-btn" data-type="${a.type}" data-target="${a.target}">${this.escapeHtml(a.label)}</button>`
+            }).join('')
         }
 
         row.innerHTML = `
