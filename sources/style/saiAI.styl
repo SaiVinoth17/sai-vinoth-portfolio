@@ -207,15 +207,69 @@
                 line-height 1.5
                 word-break break-word
 
-    .card-item
+    .ai-project-list
+        display flex
+        flex-direction column
+        gap 10px
+        margin-top 6px
+        width 100%
+
+    .ai-card
         background rgba(30, 25, 40, 0.95)
         border 1px solid rgba(214, 111, 255, 0.3)
         border-radius 12px
-        padding 12px
-        margin-top 6px
+        padding 14px
+        margin-top 8px
         display flex
         flex-direction column
         gap 8px
+
+        &.project-card
+            border-left 3px solid #D66FFF
+
+        &.experience-card
+            border-left 3px solid #8A2BE2
+
+        &.skills-card
+            background rgba(25, 20, 35, 0.95)
+            gap 12px
+
+        &.github-card
+            border-left 3px solid #6A0DAD
+
+        &.contact-card
+            border-left 3px solid #D66FFF
+
+        &.hire-card
+            border-left 3px solid #25D366
+
+        .card-actions-row
+            display flex
+            align-items center
+            gap 8px
+            flex-wrap wrap
+            margin-top 6px
+
+            .whatsapp-button
+                background #25D366
+                color #0B2512
+
+                &:hover
+                    background #34E075
+
+            .email-button
+                background #D66FFF
+                color #17131F
+
+                &:hover
+                    background #E299FF
+
+        .card-header
+            display flex
+            align-items center
+            justify-content space-between
+            gap 8px
+            flex-wrap wrap
 
         .card-title
             font-family Nunito, sans-serif
@@ -223,51 +277,115 @@
             font-size 14px
             color #ffffff
 
-        .card-category
+        .card-badge
             font-size 11px
             color #D66FFF
+            background rgba(214, 111, 255, 0.15)
+            border 1px solid rgba(214, 111, 255, 0.3)
+            padding 2px 8px
+            border-radius 10px
+            font-weight 600
             text-transform uppercase
             letter-spacing 0.5px
 
-        .card-desc
+        .card-subtitle
             font-size 12px
-            color rgba(255, 255, 255, 0.8)
-            line-height 1.4
+            color rgba(255, 255, 255, 0.6)
 
-        .card-cta
+        .card-description
+            font-size 12px
+            color rgba(255, 255, 255, 0.85)
+            line-height 1.45
+
+        .card-button
+            display inline-flex
+            align-items center
+            gap 6px
             align-self flex-start
             background #D66FFF
             color #17131F
             border none
             border-radius 8px
-            padding 6px 12px
+            padding 8px 16px
             font-family Nunito, sans-serif
             font-weight 700
             font-size 12px
             cursor pointer
             text-decoration none
-            transition background 0.2s
+            margin-top 4px
+            transition background 0.2s, transform 0.2s, box-shadow 0.2s
+            outline none
 
             &:hover
                 background #E299FF
+                transform translateY(-1px)
+                box-shadow 0 4px 12px rgba(214, 111, 255, 0.3)
+
+            &:active
+                transform translateY(0)
+
+            &:focus-visible
+                outline 2px solid #ffffff
+                outline-offset 2px
+
+        .skill-group
+            display flex
+            flex-direction column
+            gap 4px
+
+            .group-title
+                font-family Nunito, sans-serif
+                font-weight 700
+                font-size 12px
+                color #D66FFF
+                text-transform uppercase
+                letter-spacing 0.5px
+
+            .chips-row
+                display flex
+                flex-wrap wrap
+                gap 6px
+
+            .skill-chip
+                background rgba(255, 255, 255, 0.08)
+                border 1px solid rgba(255, 255, 255, 0.18)
+                border-radius 12px
+                padding 3px 10px
+                font-family Nunito, sans-serif
+                font-size 11px
+                color rgba(255, 255, 255, 0.9)
+                font-weight 600
 
     .action-btn
         display inline-flex
         align-items center
         gap 6px
-        background rgba(255, 255, 255, 0.08)
-        border 1px solid rgba(255, 255, 255, 0.2)
+        background rgba(214, 111, 255, 0.15)
+        border 1px solid rgba(214, 111, 255, 0.4)
         color #ffffff
         border-radius 8px
-        padding 6px 12px
+        padding 8px 16px
         font-family Nunito, sans-serif
+        font-weight 700
         font-size 12px
         cursor pointer
-        margin-top 4px
-        transition background 0.2s
+        margin-top 6px
+        transition background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s
+        text-decoration none
+        outline none
 
         &:hover
-            background rgba(255, 255, 255, 0.18)
+            background rgba(214, 111, 255, 0.3)
+            border-color rgba(214, 111, 255, 0.7)
+            transform translateY(-1px)
+            box-shadow 0 4px 12px rgba(214, 111, 255, 0.2)
+
+        &:active
+            transform translateY(0)
+
+        &:focus-visible
+            outline 2px solid #D66FFF
+            outline-offset 2px
 
     .thinking-dots
         display flex

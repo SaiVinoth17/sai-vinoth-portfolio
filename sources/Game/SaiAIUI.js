@@ -1,6 +1,14 @@
 import { Game } from './Game.js'
 import { SaiAIEngine } from './SaiAIEngine.js'
 import { SaiAIAnalytics } from './SaiAIAnalytics.js'
+import { 
+    sai, 
+    CANONICAL_PROJECTS, 
+    CANONICAL_CONTACT, 
+    buildWhatsAppUrl, 
+    buildMailtoUrl, 
+    resolveAIAction 
+} from '../data/sai-ai.js'
 
 export class SaiAIUI
 {
@@ -68,7 +76,7 @@ export class SaiAIUI
             }
         })
 
-        // Delegation for pills and CTA buttons
+        // Event delegation for suggestion pills and internal navigation buttons
         this.messagesElement.addEventListener('click', (e) => {
             const pill = e.target.closest('.js-suggestion-pill')
             if(pill) {
@@ -82,15 +90,13 @@ export class SaiAIUI
             if(actionBtn) {
                 const type = actionBtn.dataset.type
                 const target = actionBtn.dataset.target
-                if(type === 'navigate') {
-                    if(target === 'projects') this.engine.getTools().showProjects()
-                    else if(target === 'about') this.engine.getTools().showSkills()
-                    else if(target === 'contact') this.engine.getTools().showContact()
-                    else this.engine.getTools().showContact()
+
+                if(type === 'navigate' || type === 'navigation') {
+                    if(target === 'projects') this.engine.getTools().showProjectsSection()
+                    else if(target === 'about') this.engine.getTools().showAboutSection()
+                    else if(target === 'contact') this.engine.getTools().showContactSection()
+                    else this.engine.getTools().showContactSection()
                     SaiAIAnalytics.trackEvent('section_navigated_from_ai', { section: target })
-                } else if(type === 'url') {
-                    this.engine.getTools().openProject(target)
-                    SaiAIAnalytics.trackEvent('project_clicked_from_ai', { url: target })
                 }
             }
         })
@@ -107,7 +113,7 @@ export class SaiAIUI
         if(this.isOpen) return
         this.isOpen = true
 
-        const clickSound = this.game.audio.groups.get('click')
+        const clickSound = this.game.audio?.groups?.get('click')
         if(clickSound) clickSound.play(true)
 
         this.modalElement.classList.add('is-visible')
@@ -125,7 +131,7 @@ export class SaiAIUI
         if(!this.isOpen) return
         this.isOpen = false
 
-        const clickSound = this.game.audio.groups.get('click')
+        const clickSound = this.game.audio?.groups?.get('click')
         if(clickSound) clickSound.play(false)
 
         this.modalElement.classList.remove('is-visible')
@@ -143,15 +149,13 @@ export class SaiAIUI
         }
 
         this.inputElement.value = ''
-
-        // Render user message
         this.appendUserMessage(text)
 
-        // Dynamic status text
         let statusMsg = 'Thinking...'
-        if(text.toLowerCase().includes('project') || text.toLowerCase().includes('work')) statusMsg = "Exploring Sai's projects..."
-        else if(text.toLowerCase().includes('hire') || text.toLowerCase().includes('build')) statusMsg = "Gathering requirements..."
-        else if(text.toLowerCase().includes('hotel') || text.toLowerCase().includes('tourism') || text.toLowerCase().includes('shop')) statusMsg = "Finding the best match..."
+        const lower = text.toLowerCase()
+        if(lower.includes('project') || lower.includes('work')) statusMsg = "Exploring projects..."
+        else if(lower.includes('hire') || lower.includes('build') || lower.includes('contact') || lower.includes('whatsapp') || lower.includes('email')) statusMsg = "Connecting with Sai..."
+        else if(lower.includes('experience')) statusMsg = "Checking experience..."
 
         this.updateSubtitle(statusMsg)
         const thinkingEl = this.appendThinking(statusMsg)
@@ -176,21 +180,26 @@ export class SaiAIUI
             }
 
             if(!assistantMessageRow) {
-                this.appendAssistantMessage(result.text, result.cards, result.actions)
+                this.appendAssistantMessage(result.text, result.components || result.cards, result.actions)
             } else {
-                this.appendAssistantActions(assistantMessageRow, result.cards, result.actions)
+                this.appendAssistantCardsAndActions(assistantMessageRow, result.components || result.cards, result.actions)
             }
 
-            this.updateSubtitle(result.statusText || 'AI assistant of Sai Vinoth')
+            this.updateSubtitle(result.statusText || 'Sai Vinoth Portfolio Assistant')
         } catch (err) {
             if(thinkingEl && thinkingEl.parentNode) {
                 thinkingEl.remove()
             }
-            this.updateSubtitle('AI assistant of Sai Vinoth')
-            this.appendAssistantMessage("Sai AI is temporarily unavailable. You can still explore Sai's portfolio directly.", [], [
-                { type: 'navigate', label: 'View Projects', target: 'projects' },
-                { type: 'navigate', label: 'Contact Sai', target: 'contact' }
-            ])
+            this.updateSubtitle('Sai Vinoth Portfolio Assistant')
+            this.appendAssistantMessage(
+                "Sai AI is temporarily unavailable, but you can still explore Sai's work or contact him directly.",
+                [
+                    { type: 'contact', title: 'Work with Sai', description: 'Reach Sai directly via WhatsApp or email.' }
+                ],
+                [
+                    { type: 'navigation', target: 'projects', label: 'View Projects' }
+                ]
+            )
         }
 
         this.scrollToBottom()
@@ -228,67 +237,184 @@ export class SaiAIUI
         }
     }
 
-    appendAssistantActions(row, cards = [], actions = [])
+    /**
+     * Render typed components using STRICT COMPONENT WHITELIST
+     * Whitelist: ['project', 'project-list', 'experience', 'skills', 'contact', 'hire', 'github', 'action', 'navigation']
+     */
+    renderComponentsHtml(components = [])
+    {
+        if(!components || components.length === 0) return ''
+
+        const WHITELIST = ['project', 'project-list', 'experience', 'skills', 'contact', 'hire', 'github', 'action', 'navigation']
+
+        return components.map(comp => {
+            if(!comp || !comp.type) return ''
+            const type = comp.type.toLowerCase()
+
+            if(!WHITELIST.includes(type)) {
+                return '' // Ignore un-whitelisted dynamic component strings
+            }
+
+            // Project List Component (<AIProjectList /> -> renders multiple <AIProjectCard />)
+            if(type === 'project-list') {
+                const projectIds = comp.projectIds || Object.keys(CANONICAL_PROJECTS)
+                const cardsHtml = projectIds.map(id => this.renderSingleProjectCard(id)).join('')
+                return `<div class="ai-project-list">${cardsHtml}</div>`
+            }
+
+            // Single Project Card Component (<AIProjectCard />)
+            if(type === 'project') {
+                const projId = comp.projectId || comp.id || 'nilgiris-explorers'
+                return this.renderSingleProjectCard(projId)
+            }
+
+            // Experience Component (<AIExperienceCard />)
+            if(type === 'experience') {
+                const exp = sai.experience[0]
+                return `
+                    <div class="ai-card experience-card">
+                        <div class="card-header">
+                            <span class="card-title">${this.escapeHtml(exp.role)}</span>
+                            <span class="card-badge">${this.escapeHtml(exp.type || 'Freelance')}</span>
+                        </div>
+                        <div class="card-description">${this.escapeHtml(exp.description)}</div>
+                    </div>
+                `
+            }
+
+            // Skills Component (<AISkillGroup />)
+            if(type === 'skills') {
+                const skillsObj = sai.skills
+                const groupsHtml = Object.entries(skillsObj).map(([groupName, skillsList]) => `
+                    <div class="skill-group">
+                        <div class="group-title">${this.escapeHtml(groupName)}</div>
+                        <div class="chips-row">
+                            ${skillsList.map(skill => `<span class="skill-chip">${this.escapeHtml(skill)}</span>`).join('')}
+                        </div>
+                    </div>
+                `).join('')
+
+                return `
+                    <div class="ai-card skills-card">
+                        ${groupsHtml}
+                    </div>
+                `
+            }
+
+            // GitHub Component (<AIGitHubCard />)
+            if(type === 'github') {
+                return `
+                    <div class="ai-card github-card">
+                        <div class="card-header">
+                            <span class="card-title">GitHub</span>
+                            <span class="card-subtitle">Sai Vinoth's public work</span>
+                        </div>
+                        <a href="${CANONICAL_CONTACT.github}" target="_blank" rel="noopener noreferrer" class="card-button" aria-label="Open Sai Vinoth's GitHub profile">Open GitHub ↗</a>
+                    </div>
+                `
+            }
+
+            // Contact / Hire Component (<AIContactCard />)
+            if(type === 'contact' || type === 'hire') {
+                const title = comp.title || 'Work with Sai'
+                const desc = comp.description || "Have a website or web app project in mind? Let's talk about it."
+                const customMsg = comp.customMessage || ''
+                const waUrl = buildWhatsAppUrl(customMsg)
+                const emailUrl = buildMailtoUrl()
+                const contactType = (comp.contactType || 'both').toLowerCase()
+
+                let buttonsHtml = ''
+                if(contactType === 'whatsapp') {
+                    buttonsHtml = `<a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="card-button whatsapp-button" aria-label="Chat with Sai on WhatsApp">WhatsApp →</a>`
+                } else if(contactType === 'email') {
+                    buttonsHtml = `<a href="${emailUrl}" target="_blank" rel="noopener noreferrer" class="card-button email-button" aria-label="Email Sai Vinoth">Email Sai →</a>`
+                } else {
+                    buttonsHtml = `
+                        <a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="card-button whatsapp-button" aria-label="Chat with Sai on WhatsApp">WhatsApp →</a>
+                        <a href="${emailUrl}" target="_blank" rel="noopener noreferrer" class="card-button email-button" aria-label="Email Sai Vinoth">Email Sai →</a>
+                    `
+                }
+
+                return `
+                    <div class="ai-card hire-card">
+                        <div class="card-header">
+                            <span class="card-title">${this.escapeHtml(title)}</span>
+                            <span class="card-badge">Hire Sai</span>
+                        </div>
+                        <div class="card-description">${this.escapeHtml(desc)}</div>
+                        <div class="card-actions-row">
+                            ${buttonsHtml}
+                        </div>
+                    </div>
+                `
+            }
+
+            return ''
+        }).join('')
+    }
+
+    renderSingleProjectCard(projId)
+    {
+        const projKey = Object.keys(CANONICAL_PROJECTS).find(k => k === projId || projId.includes(k))
+        const proj = CANONICAL_PROJECTS[projKey] || CANONICAL_PROJECTS['nilgiris-explorers']
+
+        return `
+            <div class="ai-card project-card">
+                <div class="card-header">
+                    <span class="card-title">${this.escapeHtml(proj.title)}</span>
+                    <span class="card-badge">${this.escapeHtml(proj.category || 'Web Project')}</span>
+                </div>
+                <div class="card-description">${this.escapeHtml(proj.description)}</div>
+                <a href="${proj.url}" target="_blank" rel="noopener noreferrer" class="card-button" aria-label="View ${this.escapeHtml(proj.title)}">View Project ↗</a>
+            </div>
+        `
+    }
+
+    /**
+     * Render action buttons using resolveAIAction to map to REAL HTML <a> or <button> elements
+     */
+    renderActionsHtml(actions = [])
+    {
+        if(!actions || actions.length === 0) return ''
+
+        return actions.map(action => {
+            const resolved = resolveAIAction(action)
+            if(!resolved) return ''
+
+            if(resolved.kind === 'external_url') {
+                return `<a href="${resolved.url}" target="_blank" rel="noopener noreferrer" class="action-btn" aria-label="${this.escapeHtml(resolved.label)}">${this.escapeHtml(resolved.label)}</a>`
+            }
+
+            if(resolved.kind === 'internal_nav') {
+                return `<button type="button" class="action-btn js-action-btn" data-type="navigate" data-target="${resolved.target}" aria-label="${this.escapeHtml(resolved.label)}">${this.escapeHtml(resolved.label)}</button>`
+            }
+
+            return ''
+        }).filter(Boolean).join('')
+    }
+
+    appendAssistantCardsAndActions(row, components = [], actions = [])
     {
         const bubble = row.querySelector('.js-bubble-text')
         if(!bubble) return
 
-        let cardsHtml = ''
-        if(cards && cards.length > 0) {
-            cardsHtml = cards.map(c => `
-                <div class="card-item">
-                    <div class="card-title">${this.escapeHtml(c.title)}</div>
-                    <div class="card-category">${this.escapeHtml(c.category || '')}</div>
-                    <div class="card-desc">${this.escapeHtml(c.description || c.purpose || '')}</div>
-                    <a href="${c.url}" target="_blank" rel="noopener noreferrer" class="card-cta">Visit ${this.escapeHtml(c.title)} →</a>
-                </div>
-            `).join('')
-        }
-
-        let actionsHtml = ''
-        if(actions && actions.length > 0) {
-            actionsHtml = actions.map(a => {
-                if(a.type === 'url') {
-                    return `<a href="${a.target}" target="_blank" rel="noopener noreferrer" class="action-btn">${this.escapeHtml(a.label)} →</a>`
-                }
-                return `<button class="action-btn js-action-btn" data-type="${a.type}" data-target="${a.target}">${this.escapeHtml(a.label)}</button>`
-            }).join('')
-        }
-
-        bubble.innerHTML += cardsHtml + actionsHtml
+        const componentsHtml = this.renderComponentsHtml(components)
+        const actionsHtml = this.renderActionsHtml(actions)
+        bubble.innerHTML += componentsHtml + actionsHtml
     }
 
-    appendAssistantMessage(text, cards = [], actions = [])
+    appendAssistantMessage(text, components = [], actions = [])
     {
         const row = document.createElement('div')
         row.className = 'message-row assistant'
 
-        let cardsHtml = ''
-        if(cards && cards.length > 0) {
-            cardsHtml = cards.map(c => `
-                <div class="card-item">
-                    <div class="card-title">${this.escapeHtml(c.title)}</div>
-                    <div class="card-category">${this.escapeHtml(c.category || '')}</div>
-                    <div class="card-desc">${this.escapeHtml(c.description || c.purpose || '')}</div>
-                    <a href="${c.url}" target="_blank" rel="noopener noreferrer" class="card-cta">Visit ${this.escapeHtml(c.title)} →</a>
-                </div>
-            `).join('')
-        }
-
-        let actionsHtml = ''
-        if(actions && actions.length > 0) {
-            actionsHtml = actions.map(a => {
-                if(a.type === 'url') {
-                    return `<a href="${a.target}" target="_blank" rel="noopener noreferrer" class="action-btn">${this.escapeHtml(a.label)} →</a>`
-                }
-                return `<button class="action-btn js-action-btn" data-type="${a.type}" data-target="${a.target}">${this.escapeHtml(a.label)}</button>`
-            }).join('')
-        }
+        const componentsHtml = this.renderComponentsHtml(components)
+        const actionsHtml = this.renderActionsHtml(actions)
 
         row.innerHTML = `
             <div class="bubble">
                 ${this.formatMarkdown(text)}
-                ${cardsHtml}
+                ${componentsHtml}
                 ${actionsHtml}
             </div>
         `
@@ -321,7 +447,17 @@ export class SaiAIUI
 
     formatMarkdown(str)
     {
-        let escaped = this.escapeHtml(str)
+        if(!str) return ''
+
+        // Clean up orphan plain URLs from text output
+        let cleanedStr = str
+            .replace(/https:\/\/[^\s\)]+/gi, '')
+            .replace(/mailto:[^\s\)]+/gi, '')
+            .replace(/\s{2,}/g, ' ')
+            .trim()
+
+        let escaped = this.escapeHtml(cleanedStr || str)
+
         return escaped
             .replace(/^### (.*$)/gim, '<h3 class="md-h3">$1</h3>')
             .replace(/^\* (.*$)/gim, '<li class="md-li">$1</li>')
