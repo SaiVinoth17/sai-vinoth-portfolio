@@ -13,7 +13,9 @@ export default {
     {
         // https: true,
         host: true, // Open to local network and display URL
-        open: true // Open in browser
+        port: 5173,
+        strictPort: false,
+        open: false // Do not auto-open external browser on start
     },
     build:
     {
